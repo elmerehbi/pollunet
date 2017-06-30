@@ -1,0 +1,265 @@
+
+Dataset:
+train
+{0: 0.9829051825640579, 1: 0.017042554959604227, 33: 1.09370808637186e-09, 32: 4.277856895162469e-06, 10: 1.2664410501461891e-05, 12: 3.1303019140049004e-05, 20: 4.015731523795346e-06, 52: 3.645693621239533e-10}
+
+test_train
+{0: 0.9881589906562166, 1: 0.011784896952146845, 32: 4.6500093000186e-06, 10: 5.358907776639083e-06, 12: 1.6899592622714657e-05, 20: 2.9203881937175638e-05}
+
+test_test
+{0: 0.9828478388239658, 1: 0.01709681333162747, 33: 6.272776608685553e-09, 32: 4.1604190857106925e-06, 10: 1.4298794279498717e-05, 12: 3.254786962831716e-05, 13: 1.1290997895633994e-07, 20: 4.221578657645377e-06}
+
+=================================
+Réseau de base  (base.py):
+Architecture U-net, kernel 5, 64 channels sur toutes les couches, sans padding, adadelta
+conv, max, conv, max, conv, max, conv, up, conv, up, conv, up, conv, conv
+
+La segmentation en sortie doit faire apparaitre la mer, la terre, les pollutions confirmées (masques 12 et 20) 
+
+
+Batch size 1: ne converge pas, accuracy bloquée à 0.9888
+Batch size 8: loss converge très lentement (à une échelle de 100 époques), même accuracy
+Batch size 24: converge mal, même accuracy
+
+---------------------------------
+
+base_weighted:
+Même réseau, avec des poids: Mer 1, terre 100, pollution 10e6 (à peu près l'inverse des fréquences des classes)
+Ne converge pas, accuracy oscille entre 10 et 70% dans une époque
+
+----------------------------------
+
+base_weighted2:
+Meme réseau, avec des poids: mer 1, terre 10, pollution 1000
+
+Testing dataset
+
+confusion:
+[[ 0.99646384  0.00246973  0.00106644]
+ [ 0.07449984  0.9221159   0.00338426]
+ [ 0.80024785  0.          0.19975215]]
+accuracy:
+0.99560337328
+false positive:
+0.293734743694
+false negative:
+0.230769230769
+
+Testing dataset
+
+confusion:
+[[ 0.99563003  0.00239833  0.00197164]
+ [ 0.06850316  0.92836278  0.00313406]
+ [ 0.84974093  0.          0.15025907]]
+accuracy:
+0.995094624516
+false positive:
+0.363313609467
+false negative:
+0.1
+
+---------------------------------
+
+base_weighted3:
+
+Poids: mer 1, terre 10, pollution 100
+
+Testing dataset
+
+confusion:
+[[  9.95994611e-01   2.83613143e-03   1.16925732e-03]
+ [  9.59086163e-02   9.03233494e-01   8.57889354e-04]
+ [  8.54065856e-01   0.00000000e+00   1.45934144e-01]]
+accuracy:
+0.9949266411
+false positive:
+0.285598047193
+false negative:
+0.230769230769
+
+Testing dataset
+
+confusion:
+[[ 0.99521346  0.00256702  0.00221952]
+ [ 0.09597628  0.90288028  0.00114345]
+ [ 0.71803669  0.          0.28196331]]
+accuracy:
+0.994499846605
+false positive:
+0.365680473373
+false negative:
+0.0
+
+---------------------------------
+
+deep:
+
+Architecture U-net, avec un étage de max_pooling/upsampling de plus,
+nombre de channel multiplié par deux à chaque étage descendant
+Pondérés
+
+---------------------------------
+
+deep1:
+de 16 à 256 channels
+poids: mer 1, terre 10, pollution 100
+
+Testing dataset
+
+confusion:
+[[ 0.99625796  0.00374204  0.        ]
+ [ 0.02874069  0.97125931  0.        ]
+ [ 1.          0.          0.        ]]
+accuracy:
+0.996094422476
+false positive:
+0.0
+false negative:
+1.0
+
+Testing dataset
+
+confusion:
+[[ 0.99733086  0.00266914  0.        ]
+ [ 0.02431121  0.97568879  0.        ]
+ [ 1.          0.          0.        ]]
+accuracy:
+0.997220345042
+false positive:
+0.0
+false negative:
+1.0
+
+---------------------------------
+
+deep2:
+de 64 à 1024 channels
+poids: mer 1, terre 10, pollution 100
+
+Testing dataset
+
+confusion:
+[[ 0.99841393  0.00158607  0.        ]
+ [ 0.25053315  0.74946685  0.        ]
+ [ 1.          0.          0.        ]]
+accuracy:
+0.997039866074
+false positive:
+0.0
+false negative:
+1.0
+
+Testing dataset
+
+confusion:
+[[ 0.99840225  0.00159775  0.        ]
+ [ 0.22122499  0.77877501  0.        ]
+ [ 1.          0.          0.        ]]
+accuracy:
+0.997579581215
+false positive:
+0.0
+false negative:
+1.0
+
+---------------------------------
+
+deep3:
+de 8 à 128 channels
+poids: mer 1, terre 10, pollution 100
+
+Testing dataset
+
+confusion:
+[[ 0.99750314  0.00249686  0.        ]
+ [ 0.07228966  0.92771034  0.        ]
+ [ 1.          0.          0.        ]]
+accuracy:
+0.997097449913
+false positive:
+0.0
+false negative:
+1.0
+
+Testing dataset
+
+confusion:
+[[ 0.99797394  0.00202606  0.        ]
+ [ 0.06055134  0.93944866  0.        ]
+ [ 1.          0.          0.        ]]
+accuracy:
+0.997730741817
+false positive:
+0.0
+false negative:
+1.0
+
+---------------------------------
+
+deep4:
+
+de 32 à 512 channels
+poids: mer 1, terre 10, pollution 100
+
+Testing dataset
+
+confusion:
+[[ 0.99701988  0.00298012  0.        ]
+ [ 0.04083295  0.95916705  0.        ]
+ [ 1.          0.          0.        ]]
+accuracy:
+0.996786835661
+false positive:
+0.0
+false negative:
+1.0
+
+Testing dataset
+
+confusion:
+[[ 0.99764729  0.00235271  0.        ]
+ [ 0.04225056  0.95774944  0.        ]
+ [ 1.          0.          0.        ]]
+accuracy:
+0.997471102639
+false positive:
+0.0
+false negative:
+1.0
+
+---------------------------------
+
+deep6:
+
+32 channels
+
+entrainé uniquement sur les images contenant des pollutions
+
+poids: mer 1, terre 7, pollution 100
+
+Testing dataset
+
+confusion:
+[[ 0.95789558  0.0332596   0.00884483]
+ [ 0.51101955  0.4672238   0.02175665]
+ [ 0.98540541  0.          0.01459459]]
+accuracy:
+0.955216546847
+false positive:
+0.370024370431
+false negative:
+0.666666666667
+
+Testing dataset
+
+confusion:
+[[ 0.92877497  0.05789237  0.01333266]
+ [ 0.43389392  0.5512732   0.01483288]
+ [ 0.98888319  0.          0.01111681]]
+accuracy:
+0.927387094641
+false positive:
+0.407560543414
+false negative:
+0.714285714286
+
