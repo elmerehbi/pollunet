@@ -63,10 +63,10 @@ def rand_patch(f,size=patch_size,min_sea_fraction=0.75):
     return x,y
 
 def tile_array(a, b1, b2):
-    r, c = a.shape
-    rs, cs = a.strides
-    x = as_strided(a, (r, b1, c, b2), (rs, 0, cs, 0))
-    return x.reshape(r*b1, c*b2)
+    l, r, c = a.shape
+    ls, rs, cs = a.strides
+    x = as_strided(a, (l, r, b1, c, b2), (ls, rs, 0, cs, 0))
+    return x.reshape(l, r*b1, c*b2)
 
 ###############################################################
 
@@ -226,7 +226,7 @@ def calculate_patches(hdf=hdf,nc=netcdf_dir):
                 f.__delitem__("train/patches/{}".format(fn))
             f.create_dataset("train/patches/{}".format(fn),data=np.array(pts[10:]))
             
-def load_testing_images(field,size,hdf=hdf,nc=netcdf_dir,dt=None,c=1):
+def load_testing_images(field,size,hdf=hdf,nc=netcdf_dir,dt=None,c=1,broadcast=False):
     files_test=listdir(netcdf_dir.format("test",""))
     with h.File(hdf,"a") as f:
         if f.__contains__("test/{}/testing_images".format(field)):
@@ -234,15 +234,23 @@ def load_testing_images(field,size,hdf=hdf,nc=netcdf_dir,dt=None,c=1):
         ttest=f.create_dataset("test/{}/testing_images".format(field),shape=(0,size,size),chunks=True,maxshape=(None,size,size),dtype=dt)
         for file_name in files_test:
             fh=import_field(netcdf_dir.format("test",file_name),field=field)
+            if broadcast:
+                b=import_field(netcdf_dir.format("test",file_name),field='Nrcs')
+                fh=np.broadcast_to(fh,b.shape)
+
             pts=f["test/patches"][file_name]
             n=ttest.shape[0]
             ttest.resize(n+len(pts),0)
             for j,p in enumerate(extract_patches(fh,pts,size,c=c)):
-                if p.shape[0]==19:
-                    p=np.concatenate((p,p[18:19]),axis=0)
+                if p.shape[0]<int(size):
+                    m=int(size)-p.shape[-2]
+                    p=np.concatenate((p,)+(m*(p[[-1]],)),axis=0)
+                if p.shape[1]<int(size):
+                    m=int(size)-p.shape[-1]
+                    p=np.concatenate((p,)+(m*(p[:,[-1]],)),axis=1)
                 ttest[n+j]=p
         
-def load_training_images(field,size,hdf=hdf,nc=netcdf_dir,dt=None,c=1):
+def load_training_images(field,size,hdf=hdf,nc=netcdf_dir,dt=None,c=1,broadcast=False):
     files_train=listdir(netcdf_dir.format("train","")) 
     with h.File(hdf,"a") as f:
         if f.__contains__("test/{}/training_images".format(field)):
@@ -251,8 +259,12 @@ def load_training_images(field,size,hdf=hdf,nc=netcdf_dir,dt=None,c=1):
         if f.__contains__("train/{}".format(field)):
             f.__delitem__("train/{}".format(field))
         train=f.create_dataset("train/{}".format(field),(0,size,size),chunks=True,maxshape=(None,size,size),dtype=dt)
+        m,n=0,0
         for fn in files_train:
             fh=import_field(netcdf_dir.format("train",fn),field=field)
+            if broadcast:
+                b=import_field(netcdf_dir.format("train",fn),field='Nrcs')
+                fh=np.broadcast_to(fh,b.shape)
             pts_train=f["train/patches"][fn]
             pts_test=f["test/patches"][fn]
             n=test.shape[0]
@@ -260,34 +272,68 @@ def load_training_images(field,size,hdf=hdf,nc=netcdf_dir,dt=None,c=1):
             test.resize(n+len(pts_test),0)
             train.resize(m+len(pts_train),0)
             for j,p in enumerate(extract_patches(fh,pts_test,size,c=c)):
-                if p.shape[0]==19:
-                    p=np.concatenate((p,p[18:19]),axis=0)
+                if p.shape[0]<int(size):
+                    mq=int(size)-p.shape[-2]
+                    p=np.concatenate((p,)+(mq*(p[[-1]],)),axis=0)
+                if p.shape[1]<int(size):
+                    mq=int(size)-p.shape[-1]
+                    p=np.concatenate((p,)+(mq*(p[:,[-1]],)),axis=1)
                 test[n+j]=p
             for j,p in enumerate(extract_patches(fh,pts_train,size,c=c)):
-                if p.shape[0]==19:
-                    p=np.concatenate((p,p[18:19]),axis=0)
+                if p.shape[0]<int(size):
+                    mq=int(size)-p.shape[-2]
+                    p=np.concatenate((p,)+(mq*(p[[-1]],)),axis=0)
+                if p.shape[1]<int(size):
+                    mq=int(size)-p.shape[-1]
+                    p=np.concatenate((p,)+(mq*(p[:,[-1]],)),axis=1)
                 train[m+j]=p
 
 def extract_angle(size):
     field = 'Incidence angle'
+    dt='float32'
     with h.File(hdf,"a") as f:
         if f.__contains__("train/{}".format(field)):
             f.__delitem__("train/{}".format(field))
         train=f.create_dataset("train/{}".format(field),(0,size,size),chunks=True,maxshape=(None,size,size),dtype=dt)
+        if f.__contains__("test/{}/training_images".format(field)):
+            f.__delitem__("test/{}/training_images".format(field))
+        test=f.create_dataset("test/{}/training_images".format(field),(0,size,size),chunks=True,maxshape=(None,size,size),dtype=dt)
         for fn in listdir(netcdf_dir.format("train","")):
-            a=import_field(netcdf_dir.format("train","")))
-            for 
-            
-        
+            a=import_field(netcdf_dir.format("train",fn),field=field)
+            print a.shape
+            print fn
+            pts_train = f["train/patches"][fn]
+            pts_test = f["test/patches"][fn]
+            patches_train = [a[i:i+size] for j,i in pts_train]
+            patches_test = [a[i:i+size] for j,i in pts_test]
+            n=test.shape[0]
+            m=train.shape[0]
+            test.resize(n+len(pts_test),0)
+            train.resize(m+len(pts_train),0)
+            for j,p in enumerate(patches_train):
+#                print train.shape, train[n+j].shape, p.shape
+                train[n+j]=p
+            for j,p in enumerate(patches_test):
+                test[m+j]=p
+        if f.__contains__("test/{}/testing_images".format(field)):
+            f.__delitem__("test/{}/testing_images".format(field))
+            test=f.create_dataset("test/{}/training_images".format(field),(0,size,size),chunks=True,maxshape=(None,size,size),dtype=dt)
+        for fn in listdir(netcdf_dir.format("test","")):
+            a=import_field(netcdf_dir.format("train",fn),field=field)
+            pts = f["test/patches"][fn]
+            patches = [a[i,i+size] for j,i in pts]
+            n=test.shape[0]
+            test.resize(m+len(pts_train),0) 
+            for j,p in patches:
+                train[n+j]=p
 
-def load_field(field,size,hdf=hdf,nc=netcdf_dir,c=1):
+def load_field(field,size,hdf=hdf,nc=netcdf_dir,c=1,broadcast=False):
     if field=='Mask':
         dt='int8'
     else:
         dt='float32'
-    load_testing_images(field,size,hdf=hdf,nc=netcdf_dir,dt=dt,c=c)
-    load_training_images(field,size,hdf=hdf,nc=netcdf_dir,dt=dt,c=c)
-
+    load_testing_images(field,size,hdf=hdf,nc=netcdf_dir,dt=dt,c=c,broadcast=broadcast)
+    load_training_images(field,size,hdf=hdf,nc=netcdf_dir,dt=dt,c=c,broadcast=broadcast)
 def change_mask(name,hdf=hdf):
     with h.File(hdf,"a") as f:
         u=f["train/Mask"]
@@ -309,15 +355,31 @@ def change_mask(name,hdf=hdf):
 
 # print "extracting wind direction"
 
-# load_field('modelWindDirection',patch_size/25.,c=25.)
+# load_field('modelWindDirection',patch_size/25.+1.,c=25.)
 
 # print "extracting wind speed"
 
-# load_field('modelWindSpeed',patch_size/25.,c=25.) 
+# load_field('modelWindSpeed',patch_size/25.+1.,c=25.) 
 
-print "extracting incince angle"
+# print "extracting incidence angle"
+# load_field('Incidence angle',patch_size,broadcast=True)
+# print "Ok"
+
+print 'calculating gmf'
+
+with h.File(hdf) as f:
+    n=12
+    for p in ['train/{}','test/{}/testing_images','test/{}/training_images']:
+        if f.__contains__(p.format('GMF')):
+            f.__delitem__(p.format('GMF'))
+        f.create_dataset(p.format('GMF'),f[p.format('Nrcs')].shape,dtype='float32')
+        for i in range(n):
+            l=len(f[p.format('modelWindSpeed')])/n+1
+            ws=tile_array(f[p.format('modelWindSpeed')][i*l:(i+1)*l],25,25)[:,0:patch_size,0:patch_size]
+            wd=tile_array(f[p.format('modelWindDirection')][i*l:(i+1)*l],25,25)[:,0:patch_size,0:patch_size]
+            ia=f[p.format('Incidence angle')][i*l:(i+1)*l]
+            print ws.shape, wd.shape, ia.shape
+            f[p.format('GMF')][i*l:(i+1)*l]=_getNRCS(ia, ws, wd)
 
 
-# with h.File(hdf) as f:
-#     for p in ['train/{}','test/{}/testing_images','test/{}/training_images']:
-#         ws=f[p.format()]
+

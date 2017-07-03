@@ -203,8 +203,9 @@ def measures(fn,c=2):
             pred=f["segmentation/{}/{}".format(p,fn)][:].reshape((-1,))
             print "confusion:"
             a=confusion_matrix(gt,pred)
-            a/=np.sum(a,axis=-1)[:,None]
+            a=a/np.sum(a,axis=-1)[:,None].astype(float)
             print a
+            print confusion(fn,p)
             print "accuracy:"
             print accuracy_score(gt,pred)
             del gt,pred
@@ -217,12 +218,25 @@ def measures(fn,c=2):
 def randl(n,lg,l):
     return sorted(set([randint(0,lg) for i in range(n-len(l))]+l))
 
-l4_train=[130, 160, 245, 262, 446, 459, 690, 849, 855, 1101, 1147, 1148, 1159, 1207, 1219, 1285, 1288, 1372, 1383, 1384, 1397, 1414, 1422, 1429, 1439, 1687, 2332, 2346, 2352, 2353, 2435, 2439, 2462, 2473, 2521, 2587, 2675, 2753, 3157, 3198, 3528, 3767, 3859, 3881, 3892, 4201, 4223, 4225, 4231, 4256, 4297, 4326, 4358, 4361, 4363, 4392, 4514, 4525, 4533, 4570, 4586, 5287, 5315, 5334, 5367, 5567, 6112, 6113, 6135, 6144, 6152, 6170, 6223, 6265, 6288, 6307, 6318, 6330, 6427, 6444, 6457, 6479, 6480, 6489, 6520, 6536, 6877, 6917, 7184, 7186, 7198, 7220, 7221, 7228, 7292, 7451, 7469, 7646, 7694, 7704, 7859, 7871, 7994, 8035, 8134, 8343, 8354, 8435, 8436, 8466, 8470, 8490, 8501, 8505, 8522, 8540, 8832, 8911, 8913, 8914, 8941, 9103, 9133, 9317, 9669, 9856, 9894, 9913, 10075, 10084, 10113, 10179, 10200, 10206, 10652, 10822, 10977, 11007, 11056, 11117, 11122, 11135, 11148, 11150, 11173, 11181, 11197, 11202, 11209, 11228, 11270, 11285, 11289, 11789, 12560, 13339, 13367, 13531, 13552, 13584, 13610, 14064, 14070, 14077, 14091, 14098, 14680, 14694, 14717, 14725, 15008, 15210, 15276, 15306, 15373, 15435, 15436, 15442, 15451, 15465, 15881, 15904, 15909, 15944, 16041, 16743, 16779, 16825, 17037]
-
-l4_tr=[15, 123, 221, 355, 411, 590, 603, 718, 791, 807, 848, 876, 1179, 1410, 1520, 1573, 1623, 1628]
-
-l4_ts=[90, 94, 108, 362, 377, 401, 411, 446, 487, 734, 739, 871, 876, 883, 887, 924, 1164, 1191, 1245, 1249, 1262, 1517, 1580, 1586, 1786, 1811, 1817, 1825, 1952, 1963, 1970, 1999, 2016, 2029, 2038, 2063, 2071, 2387, 2653, 2674, 3097, 3466, 3472, 3544, 3570, 3571, 3664, 3740]
-
 tr='training_images'
 ts='testing_images'
 tra='train'
+
+def load_pollutions():
+    with h.File(hdf,'a') as f:
+        if f.__contains__('pollutions_indices/'+tra):
+            del f['pollutions_indices/'+tra]
+        if f.__contains__('pollutions_indices/'+tr):
+            del f['pollutions_indices/'+tr]
+        if f.__contains__('pollutions_indices/'+ts):
+            del f['pollutions_indices/'+ts]
+        f['pollutions_indices/'+tra]=np.array(find_mask(6,tra))
+        f['pollutions_indices/'+tr]=np.array(find_mask(6,tr))
+        f['pollutions_indices/'+ts]=np.array(find_mask(6,ts))
+
+#load_pollutions()
+
+with h.File(hdf,'r') as f: 
+    l4_train=list(f['pollutions_indices/'+tra][:])
+    l4_tr=list(f['pollutions_indices/'+tr][:])
+    l4_ts=list(f['pollutions_indices/'+ts][:])

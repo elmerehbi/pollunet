@@ -29,7 +29,7 @@ K.set_image_dim_ordering('th') # Theano dimension ordering in this code
 weight_dir = "/users/local/h17valen/Deep_learning_pollution/weights/"
 
 # Poids des différentes classes pour le loss
-weight_pollution = 1000.
+weight_pollution = 1500.
 weight_land = 5.
 weight_boats = 1000.
 weight_sea = 1
@@ -54,9 +54,9 @@ def channels(depth):
 #    return channels_max / 2**depth
 
 # Training parameters
-training_size = 1000
+training_size = 2000
 batch_size=24
-epochs=3
+epochs=6
 optimizer=adadelta()
 
 
@@ -102,13 +102,13 @@ def unet_layers(x,depth):
 ###########################
 
 sar_input = Input(shape=(height, width))
-mask_input = Input(shape=(height, width, 2))
+gmf_input = Input(shape=(height, width))
 
 sar = Reshape((1,height,width))(sar_input)
-mask = Permute((3,1,2))(mask_input)
+gmf = Reshape((1,height,width))(gmf_input) #Permute((3,1,2))(gmf_input)
 
 
-x = concatenate([sar,mask],axis=1)
+x = concatenate([sar,gmf],axis=1)
 
 x = unet_layers(x,depth)
 
@@ -121,13 +121,12 @@ x = Permute((2,1))(x)
 
 x = Activation('softmax')(x)
 
-unet = Model([sar_input,mask_input],x)
+unet = Model([sar_input,gmf_input],x)
 
 ###########################
 
 #print unet.summary()
 # print size_out
-
 unet.compile(optimizer=optimizer, loss='categorical_crossentropy',
                 metrics=['categorical_accuracy'],
                 sample_weight_mode="temporal")
@@ -144,7 +143,7 @@ o=(width-size_out)/2
 with h.File(hdf,"a") as f:
     nb_train = len(f["train/Nrcs"])
     nb_set1 = len(f["test/Nrcs/training_images"])
-    nb_set2 = len(f["test/Nrcs/testing_images"]) 
+    nb_set2 = len(f["test/Nrcs/testing_images"])
 
 
     n=8
@@ -193,6 +192,7 @@ with h.File(hdf,"a") as f:
 with h.File(hdf,"r") as f:
     l = m.randl(training_size,nb_train,m.l4_train)
 
+#    print len(l), nb_train,len(l), f["weights/"+fl].shape
 #    print l
      # Weights
     w=f["weights/"+fl][l]
@@ -200,8 +200,10 @@ with h.File(hdf,"r") as f:
     train_nrcs=f["train/Nrcs"][l]
     # Train mask
     train_mask=f["masks/train/"+fl][l][:,o:-o,o:-o,:].reshape((-1,size_out*size_out,nbClass))
+    # Input gmf
+    input_gmf = f["train/GMF"][l]
     # Input mask
-    input_mask = f["masks/train/"+fl][l][...,[1,3]]
+    # input_mask = f["masks/train/"+fl][l][...,[1,3]]
 
     w[w==1]=weight_land
     w[w==0]=weight_sea   
@@ -214,20 +216,21 @@ with h.File(hdf,"r") as f:
 ###########################
 
 
-    unet.fit([train_nrcs,input_mask],train_mask,shuffle=True,verbose=1,batch_size=batch_size,epochs=epochs,sample_weight=w)
+    unet.fit([train_nrcs,input_gmf],train_mask,shuffle=True,verbose=1,batch_size=batch_size,epochs=epochs,sample_weight=w)
 
     unet.save_weights(weight_dir+fl)
 
 #    exit ()
 #    print unet.evaluate(test_nrcs,test_mask)
 
-    del input_mask
+    del input_gmf
     del train_mask
     del train_nrcs
 
     test_nrcs=f["test/Nrcs/testing_images/"]
-    input_mask = f["masks/testing_images/"+fl][:][...,[1,3]] 
-    v=unet.predict([test_nrcs,input_mask],verbose=1)
+    input_gmf = f["test/GMF/testing_images"]
+#    input_mask = f["masks/testing_images/"+fl][:][...,[1,3]] 
+    v=unet.predict([test_nrcs,input_gmf],verbose=1)
 
 with h.File(hdf,"a") as f:
     f.require_dataset("results/testing_images/"+fl,shape=(nb_set2,size_out,size_out,nbClass),dtype='f4',exact=False)
@@ -235,13 +238,14 @@ with h.File(hdf,"a") as f:
     f.require_dataset("segmentation/testing_images/"+fl,shape=(nb_set2,size_out,size_out),dtype='i8',exact=False)
     f["segmentation/testing_images/"+fl][:]=m.to_classes(v).reshape(-1,size_out,size_out)
 
-    del input_mask
+    del input_gmf
     del test_nrcs
 
 with h.File(hdf,"r") as f:
     test_nrcs=f["test/Nrcs/training_images/"]
-    input_mask = f["masks/training_images/"+fl][:][...,[1,3]]#.reshape(-1,size_out,size_out,2)
-    w=unet.predict([test_nrcs,input_mask],verbose=1)
+    input_gmf=f["test/GMF/training_images"]
+#    input_mask = f["masks/training_images/"+fl][:][...,[1,3]]#.reshape(-1,size_out,size_out,2)
+    w=unet.predict([test_nrcs,input_input_gmf],verbose=1)
 
 with h.File(hdf,"a") as f:
     f.require_dataset("results/training_images/"+fl,shape=(nb_set1,size_out,size_out,nbClass),dtype='f4',exact=False)
@@ -249,7 +253,7 @@ with h.File(hdf,"a") as f:
     f.require_dataset("segmentation/training_images/"+fl,shape=(nb_set1,size_out,size_out),dtype='i8',exact=False)
     f["segmentation/training_images/"+fl][:]=m.to_classes(w).reshape(-1,size_out,size_out)
 
-    del input_mask
+    del input_gmf
     del test_nrcs
 
     # test_nrcs=f["train/Nrcs/"]
