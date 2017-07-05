@@ -1,3 +1,4 @@
+
 # coding=utf8
 
 ###########################
@@ -54,9 +55,9 @@ def channels(depth):
 #    return channels_max / 2**depth
 
 # Training parameters
-training_size = 1000
+training_size = 4000
 batch_size=24
-epochs=3
+epochs=5
 optimizer=adadelta()
 
 
@@ -70,7 +71,7 @@ def crop():
         c*=2
 
 
-size_out = width - 2 * list(crop())[-1] - (kernel-1) * (nb_conv_out + nb_conv)
+size_out = width - 2 * list(crop())[-1] - (kernel-1) * (nb_conv_out + 2 * nb_conv)
 
 c=crop()
 
@@ -113,7 +114,9 @@ x = concatenate([sar,mask],axis=1)
 x = unet_layers(x,depth)
 
 for i in range(nb_conv_out):
-    x = Conv2D(nbClass,1,padding='valid',data_format='channels_first')(x)
+    x = Conv2D(channels(depth),kernel,padding='valid',data_format='channels_first')(x)
+
+x = Conv2D(nbClass,1,padding='valid',data_format='channels_first')(x)
 
 x = Reshape((nbClass,-1))(x)
 
@@ -208,11 +211,11 @@ with h.File(hdf,"r") as f:
     w[w==2]=weight_pollution
     w[w==3]=weight_boats
 
-    if os.path.isfile(weight_dir+fl):
-        unet.load_weights(weight_dir+fl)
-
 ###########################
 
+
+    if os.path.isfile(weight_dir+fl):
+        unet.load_weights(weight_dir+fl,by_name=True)
 
     unet.fit([train_nrcs,input_mask],train_mask,shuffle=True,verbose=1,batch_size=batch_size,epochs=epochs,sample_weight=w)
 

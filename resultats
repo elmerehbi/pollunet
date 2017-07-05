@@ -263,3 +263,52 @@ false positive:
 false negative:
 0.714285714286
 
+---------------------------------
+
+land1.py:
+
+entrée: 4000 images, dont toutes celle contenant des pollutions
+	SAR et mask contenant la terre et les bateaux
+	deux entrées concaténées
+
+Poids: terre 5, pollution 1000
+
+Testing dataset
+
+confusion:
+[[  9.87754444e-01   2.23133258e-04   1.19796555e-02   4.27676678e-05]
+ [  1.79582609e-04   9.99814579e-01   2.65855242e-06   3.17983720e-06]
+ [  4.70886027e-01   1.73240169e-04   5.28940733e-01   0.00000000e+00]
+ [  8.12300551e-03   3.48128808e-03   0.00000000e+00   9.88395706e-01]]
+accuracy:
+0.987992729939
+false positive:
+0.520172025394
+false negative:
+0.166666666667
+
+Testing dataset
+
+confusion:
+[[  9.78033691e-01   1.85484770e-04   2.17284604e-02   5.23639393e-05]
+ [  5.72848073e-05   9.99936248e-01   2.58705581e-06   3.88058372e-06]
+ [  2.01283253e-01   0.00000000e+00   7.98716747e-01   0.00000000e+00]
+ [  1.04748603e-02   2.09497207e-03   0.00000000e+00   9.87430168e-01]]
+accuracy:
+0.978412394958
+false positive:
+0.571342925659
+false negative:
+0.0625
+
+---------------------------------
+
+land3.py
+
+Meme chose, mais les deux entrées sont traitées dans deux réseaux U-net différents avant d'etre concaténées
+
+
+---------------------------------
+
+gmf1.py
+

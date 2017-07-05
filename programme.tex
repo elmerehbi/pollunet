@@ -1,0 +1,113 @@
+\documentclass{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{color,here}
+\usepackage{hyperref}
+\newcommand{\red}[1]{\textcolor{red}{#1}}
+
+\begin{document}
+
+\title{Expérimentation du modèle U-net pour la détection de pollution marine}
+\author{Herménégilde Valentin}
+
+\maketitle
+
+\section{Objectif}
+Comparer différents modèles de CNN pour la segmentation d'images SAR marines et la détection de traces de pollution.
+
+\section{Modèle de base}
+Architecture U-net (\hyperlink{https://arxiv.org/pdf/1505.04597.pdf}{https://arxiv.org/pdf/1505.04597.pdf}), implémentation de départ de Redouane Lguensat (sur Keras).
+
+\section{Modèles à comparer}
+
+\begin{itemize}
+\item Modèle de base: U-net, SAR en entrée
+\item U-net avec SAR+vent
+\item U-net avec SAR+angle d'incidence
+\item U-net avec SAR+angle+vent
+\item Couplage des différentes entrées: Sur différentes couches parallèles ou traitements par des réseaux séparés puis merge
+\item CNN classique ayant une profondeur et un nombre de paramètres similaires au réseau U-net considéré, avec l'image SAR en entrée
+\end{itemize}
+
+\section{Mesures sur les modèles}
+
+\begin{itemize}
+\item Correction de la segmentation pixel par pixel: pourcentage de pixels corrects, intersection over union ($\frac{\left\vert Pollution\ reelle \cap Pollution\ predite \right\vert}{\left\vert Pollution\ reelle \cup Pollution\ predite\right\vert}$)
+\item Pourcentage d'images sur lesquelles le réseau détecte une pollution absente (faux positifs)
+\item Pourcentage d'images sur lesquelles le réseau ne détecte pas une pollution présente (faux négatifs)
+\end{itemize}
+
+\section{Données en entrée du réseau}
+
+\subsection{Données brute}
+\subsubsection{Premier jeu de données}
+Données fournies par CLS: 204 fichiers netcdf contenant des images du détroit de Gibraltar, de taille 6000 (range) par 5000 à 20000 (azimut).
+Contient aussi:
+\begin{itemize}
+\item Angle d'incidence selon le range
+\item Vitesse du vent mesurée sur l'image radar
+\item Direction du vent mesurée sur l'image radar
+\item Vitesse du vent modelisé (météo)
+\item Direction du vent modelisé
+\item Densité du traffic maritime
+\item Fréquence des pollutions
+\item Qualité de l'estimation de la fréquence (nombre d'observation)
+\item Bathymétrie
+\item Le masque qui indique (par bit):
+  \begin{itemize}
+  \item[0] La mer
+  \item[1] La terre
+  \item[2] Les tâches qui ressemblent à des pollutions
+  \item[4] Les tâches de pollution
+  \item[8] Les pollutions finies (notifications de pollution)
+  \item[16] Les pollution en cours
+  \item[32] Les bateaux
+  \end{itemize}
+\end{itemize}
+
+\subsection{Taille d'image en entrée du réseau}
+Images 508x508 pixels\\
+Cette dimension est assez grande pour que le réseau ait un aperçu contextualisé d'une tache de pollution et permet d'avoir une base de données conséquente (les images satellites sont en 6000x10000, soit environ 200 blocs de 500x500 par image, auxquels on retire ceux couvrant trop de terre); sur une image trop petite, la mesure de la fréquence de faux positifs et de faux négatifs perd son sens, car trop loin de la situation d'utilisation réelle. \\ 
+
+\subsection{Constitution des jeux de données}
+Pour constituer les bases d'apprentissage et de test, les images sont extraites de manière aléatoire dans les images satellite en veillant à ce qu'elles contiennent au moins 3/4 de mer.\\
+Chaque jeu de données doit contenir une base d'entraînement prises dans au moins 50\% des images satellite (pour avoir assez de diversité de situations) et deux bases de tests: une extraite des images dont on a pris des images pour la base d'entraînement, et une extraite du reste des images. Les tests sur les différents modèles se feront sur un même jeu de donnée.
+
+\subsection{Jeux de données}
+Deux jeux données homogènes A et B, sur deux zones différentes.
+
+\section{Questions}
+
+\begin{enumerate}
+\item Quelle paramétrisation de U-net permet une bonne segmentation des pollution? (nombre de couches convolutives, padding, nombres de channels par couche, nombre de max-pooling/upsampling)
+\item Apport du modèle U-net par rapport à un CNN classique?
+\item Comment assembler des données supplémentaires? Concaténation en entrée ou traitements séparés avant fusion? 
+\item Différence de précision avec différentes données? (carte du vent, angle selon le range)
+\item Différence de précision entre les image satellites qui ont servi pour l'entraînement et les autres?
+\item Possibilité de faire fonctionner un même modèle sur un jeu de données non homogène? Comparaison de performances entre un réseau entraîné sur A testé sur A, entraîné sur A testé sur B et entraîné sur A et B.
+\end{enumerate}
+
+\section{Expériences}
+
+\subsection{Tests}
+
+\begin{enumerate}
+\item Essai sur U-net avec des variations sur les différents paramètres (sur le jeu A).
+\item Comparaison des performances entre U-net et un CNN standard (succession de couches convolutives) (jeu A).
+\item Comparaison des performances entre U-net avec seulement l'image SAR en entrée et U-net avec la carte du vent ou (non exclusif) l'angle de vue, à chaque fois selon les différents assemblages des données (jeu A).
+\item Reprise des tests 1. et 3. sur les deux jeux de données.
+\end{enumerate}
+
+\subsection{Résultats à produire}
+Pour chaque essai d'un modèle, on récupère les différentes mesures sur les deux bases de test du jeu de données correspondant pour pouvoir les classer dans un tableau récapitulatif de l'expérience (qui contient les paramètres qui varient et les mesures).
+Si possible, repérer aussi des exemples type de configuration qui font échouer le réseau.
+
+\section{Résultats}
+
+\begin{tabular}{}
+  
+\end{tabular}
+
+\end{document}

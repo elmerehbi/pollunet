@@ -1,7 +1,8 @@
+"""Fonctions d'extraction des patchs"""
 #coding=utf8
 
 from netCDF4 import Dataset
-from matplotlib.pyplot import show, imshow
+from matplotlib.pyplot import show, imshow, subplot
 from matplotlib.colors import LogNorm
 from random import randint
 import numpy as np
@@ -181,6 +182,28 @@ def _getNRCS(inc_angle, wind_speed, wind_dir):
     sig  = b0 * ( 1. + b1*cosi + np.tanh(b2)*cos2i )
     return sig
 
+def view_gmf(fn):
+    nrcs=import_field(fn,'Nrcs')[::10,::10]
+    ws=import_field(fn,'modelWindSpeed')
+    wd=import_field(fn,'modelWindDirection')
+    ia=import_field(fn,'Incidence angle')
+    ws=tile_array(ws[None,...],25,25)[0,::10,0::10][:nrcs.shape[0],:nrcs.shape[1]]
+    wd=tile_array(wd[None,...],25,25)[0,::10,0::10][:nrcs.shape[0],:nrcs.shape[1]]
+    ia=ia[::10][:ws.shape[1]]
+#    print ia.shape,nrcs.shape,wd.shape,ws.shape
+    gmf=_getNRCS(ia,ws,wd)
+    vmax=gmf.max()
+    vmin=min(nrcs.min(),gmf.min())
+    nrcs[nrcs>2*vmax]=2*vmax
+    subplot(1,4,1)
+    imshow(nrcs,cmap='gray',vmin=vmin,vmax=2*vmax)
+    subplot(1,4,2)
+    imshow(gmf,cmap='gray',norm=LogNorm())#,vmin=vmin,vmax=vmax)
+    subplot(1,4,3)
+    imshow(wd,norm=LogNorm())
+    subplot(1,4,4)
+    imshow(ws,norm=LogNorm()) 
+    show()
 
 ###################################################################
 
@@ -341,6 +364,10 @@ def change_mask(name,hdf=hdf):
         w=f["test/Mask/training_images"]
 
         
+########################################
+# Scripts d'extraction, à décommenter
+########################################
+
 
 # print "calculating patches..."
 # calculate_patches()
@@ -365,21 +392,21 @@ def change_mask(name,hdf=hdf):
 # load_field('Incidence angle',patch_size,broadcast=True)
 # print "Ok"
 
-print 'calculating gmf'
+# print 'calculating gmf'
 
-with h.File(hdf) as f:
-    n=12
-    for p in ['train/{}','test/{}/testing_images','test/{}/training_images']:
-        if f.__contains__(p.format('GMF')):
-            f.__delitem__(p.format('GMF'))
-        f.create_dataset(p.format('GMF'),f[p.format('Nrcs')].shape,dtype='float32')
-        for i in range(n):
-            l=len(f[p.format('modelWindSpeed')])/n+1
-            ws=tile_array(f[p.format('modelWindSpeed')][i*l:(i+1)*l],25,25)[:,0:patch_size,0:patch_size]
-            wd=tile_array(f[p.format('modelWindDirection')][i*l:(i+1)*l],25,25)[:,0:patch_size,0:patch_size]
-            ia=f[p.format('Incidence angle')][i*l:(i+1)*l]
-            print ws.shape, wd.shape, ia.shape
-            f[p.format('GMF')][i*l:(i+1)*l]=_getNRCS(ia, ws, wd)
+# with h.File(hdf) as f:
+#     n=12
+#     for p in ['train/{}','test/{}/testing_images','test/{}/training_images']:
+#         if f.__contains__(p.format('GMF')):
+#             f.__delitem__(p.format('GMF'))
+#         f.create_dataset(p.format('GMF'),f[p.format('Nrcs')].shape,dtype='float32')
+#         for i in range(n):
+#             l=len(f[p.format('modelWindSpeed')])/n+1
+#             ws=tile_array(f[p.format('modelWindSpeed')][i*l:(i+1)*l],25,25)[:,0:patch_size,0:patch_size]
+#             wd=tile_array(f[p.format('modelWindDirection')][i*l:(i+1)*l],25,25)[:,0:patch_size,0:patch_size]
+#             ia=f[p.format('Incidence angle')][i*l:(i+1)*l]
+#             print ws.shape, wd.shape, ia.shape
+#             f[p.format('GMF')][i*l:(i+1)*l]=_getNRCS(ia, ws, wd)
 
 
 

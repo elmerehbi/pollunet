@@ -29,7 +29,7 @@ K.set_image_dim_ordering('th') # Theano dimension ordering in this code
 weight_dir = "/users/local/h17valen/Deep_learning_pollution/weights/"
 
 # Poids des différentes classes pour le loss
-weight_pollution = 500.
+weight_pollution = 800.
 weight_land = 5.
 weight_boats = 1000.
 weight_sea = 1
@@ -40,14 +40,14 @@ width = 508
 height = 508
 nbClass = 4
 kernel = 5
-depth = 3
+depth = 4
 nb_conv = 1
 nb_conv_out = 1
 activation = "relu"
 dropout_down = 0.1
 dropout_up = 0
 
-channels_max = 32
+channels_max = 64
 
 def channels(depth):
     return channels_max
@@ -55,8 +55,8 @@ def channels(depth):
 
 # Training parameters
 training_size = 2000
-batch_size=24
-epochs=5
+batch_size=16
+epochs=6
 optimizer=adadelta()
 
 
@@ -213,7 +213,7 @@ with h.File(hdf,"r") as f:
     w[w==3]=weight_boats
 
     if os.path.isfile(weight_dir+fl):
-        unet.load_weights(weight_dir+fl,by_name=True)
+        unet.load_weights(weight_dir+fl)
 
 ###########################
 
