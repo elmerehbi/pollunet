@@ -263,6 +263,10 @@ false positive:
 false negative:
 0.714285714286
 
+=================================
+
+Les réseaux suivant doivent distinguer les bateaux en plus de la mer et de la terre, et toutes les pollution (masques 10, 12 et 20)
+
 ---------------------------------
 
 land1.py:
@@ -312,3 +316,104 @@ Meme chose, mais les deux entrées sont traitées dans deux réseaux U-net diff�
 
 gmf1.py
 
+Prend en entrée l'image SAR prédite à partir du vent modèle et de l'angle d'incidence
+
+2000 images en entrée, dont toutes les images de pollution.
+
+Poids: Terre 5, pollution 500
+
+Testing dataset
+
+confusion:
+[[  9.89903080e-01   2.48090517e-03   7.54769080e-03   6.83240000e-05]
+ [  1.29461546e-01   8.68653697e-01   1.29752997e-03   5.87227313e-04]
+ [  4.83879040e-01   0.00000000e+00   5.16120960e-01   0.00000000e+00]
+ [  1.85958805e-01   1.85668697e-02   3.33623441e-02   7.62111981e-01]]
+accuracy:
+0.987203107224
+false positive:
+0.50358386238
+false negative:
+0.185185185185
+
+Testing dataset
+
+confusion:
+[[  9.83080864e-01   3.08139265e-03   1.37518478e-02   8.58954720e-05]
+ [  9.27237762e-02   9.06467399e-01   2.84576140e-04   5.24248382e-04]
+ [  1.41157811e-01   0.00000000e+00   8.58842189e-01   0.00000000e+00]
+ [  1.99720670e-01   3.70111732e-02   2.58379888e-02   7.37430168e-01]]
+accuracy:
+0.981685650927
+false positive:
+0.575539568345
+false negative:
+0.03125
+
+---------------------------------
+
+gmf3.py
+
+Pareil que gmf1.py, mais avec les masques en plus en entrée (terre et bateaux), traités par un réseaux parallèle, puis concaténé deux convolutions avant la sortie.
+
+Testing dataset
+
+confusion:
+[[  9.91497438e-01   2.81286761e-04   8.15839133e-03   6.28835222e-05]
+ [  2.30719030e-04   9.99515717e-01   1.33595269e-07   2.53430226e-04]
+ [  4.95910395e-01   0.00000000e+00   5.04089605e-01   0.00000000e+00]
+ [  4.94804552e-03   7.91687284e-03   0.00000000e+00   9.87135082e-01]]
+accuracy:
+0.991586770913
+false positive:
+0.442351013721
+false negative:
+0.333333333333
+
+Testing dataset
+
+confusion:
+[[  9.85691317e-01   2.23794224e-04   1.40178733e-02   6.70154016e-05]
+ [  1.78562748e-04   9.99471531e-01   0.00000000e+00   3.49905978e-04]
+ [  1.93691402e-01   0.00000000e+00   8.06308598e-01   0.00000000e+00]
+ [  3.80228137e-03   5.06970849e-03   0.00000000e+00   9.91128010e-01]]
+accuracy:
+0.985845464528
+false positive:
+0.497601918465
+false negative:
+0.28125
+
+---------------------------------
+
+gmf6.py
+
+Poids: pollution 370
+
+Testing dataset
+
+confusion:
+[[  9.89018722e-01   9.03435665e-05   1.08523101e-02   3.86245062e-05]
+ [  6.60762201e-04   9.99316660e-01   8.68369249e-06   1.38939080e-05]
+ [  2.19007508e-01   0.00000000e+00   7.80992492e-01   0.00000000e+00]
+ [  4.94804552e-04   2.47402276e-03   0.00000000e+00   9.97031173e-01]]
+accuracy:
+0.989161287129
+false positive:
+0.463035019455
+false negative:
+0.240740740741
+
+Testing dataset
+
+confusion:
+[[  9.82919691e-01   5.83193839e-05   1.69804777e-02   4.15118543e-05]
+ [  1.04249842e-03   9.98947394e-01   2.88780724e-06   7.21951811e-06]
+ [  2.26033869e-01   0.00000000e+00   7.73966131e-01   0.00000000e+00]
+ [  0.00000000e+00   0.00000000e+00   0.00000000e+00   1.00000000e+00]]
+accuracy:
+0.983099003742
+false positive:
+0.5
+false negative:
+0.21875

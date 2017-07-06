@@ -2,7 +2,7 @@
 
 Ce dépôt contient une adaptation du réseau de neurones U-net (https://arxiv.org/pdf/1505.04597.pdf), pour une expérimentation sur la détection de pollutions maritimes sur des images satellites (SAR).
 Le jeu de données a été fourni par l'entreprise CLS (www.cls.fr/).
-Le but n'est pas de produire un front-end utilisable directement, ce travail s'est restreint au côté expérimental. En conséquence, le code tel quel nécessite une configuration précise (emplacement des fichiers) et n'est pas optimisé (parfois très lent)
+Le but n'est pas de produire un front-end utilisable directement, ce travail s'est restreint au côté expérimental. En conséquence, le code tel quel nécessite une configuration précise (emplacement des fichiers, forme des données...) et n'est pas optimisé (parfois très lent)
 
 # Requirement
 

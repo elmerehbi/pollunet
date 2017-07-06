@@ -1,5 +1,5 @@
-"""Fonctions d'extraction des patchs"""
 #coding=utf8
+"""Fonctions d'extraction des patchs"""
 
 from netCDF4 import Dataset
 from matplotlib.pyplot import show, imshow, subplot
@@ -207,6 +207,8 @@ def view_gmf(fn):
 
 ###################################################################
 
+
+
 def extract_pts(f,n=nb_max_patch_par_image,size=patch_size,min_sea_fraction=min_sea_fraction,max_overlap=max_overlap):
     mask=np.zeros(f['Nrcs'].shape)
     l=[]
@@ -281,7 +283,8 @@ def load_training_images(field,size,hdf=hdf,nc=netcdf_dir,dt=None,c=1,broadcast=
         test=f.create_dataset("test/{}/training_images".format(field),(0,size,size),chunks=True,maxshape=(None,size,size),dtype=dt)
         if f.__contains__("train/{}".format(field)):
             f.__delitem__("train/{}".format(field))
-        train=f.create_dataset("train/{}".format(field),(0,size,size),chunks=True,maxshape=(None,size,size),dtype=dt)
+        dataset_size=sum([len(i) for i in f['train/patches']])
+        train=f.create_dataset("train/{}".format(field),(dataset_size,size,size),chunks=True,dtype=dt)
         m,n=0,0
         for fn in files_train:
             fh=import_field(netcdf_dir.format("train",fn),field=field)
@@ -410,3 +413,27 @@ def change_mask(name,hdf=hdf):
 
 
 
+def unchunk(field,dataset):
+    if dataset == 'train':
+        path='train/'+field
+    else:
+        path='test/{}/{}'.format(field,dataset)
+    with h.File(hdf) as f:
+        f.create_dataset('tmp',f[path].shape,data=f[path])
+        del f[path]
+        f[path]=f['tmp']
+        del f['tmp']
+
+# print 'n'
+# unchunk('Nrcs')
+# print 'm'
+# unchunk('Mask')
+# print 'wd'
+# unchunk('modelWindDirection')
+# print 'ws'
+# unchunk('modelWindSpeed')
+
+for f in ('Mask','Nrcs'):
+    for d in ('testing_images','training_images'):
+        print f,d
+        unchunk(f,d)

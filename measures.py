@@ -344,3 +344,67 @@ with h.File(hdf,'r') as f:
     l4_train=list(f['pollutions_indices/'+tra][:])
     l4_tr=list(f['pollutions_indices/'+tr][:])
     l4_ts=list(f['pollutions_indices/'+ts][:])
+
+
+# fppx=[0.0011,0.0012,0,0.0088,0.012,0.0075,0.0082]
+# vppx=[0.2,0.15,0,0.15,0.53,0.516,0.504]
+# fppt=[0.293,0.366,0,0.37,0.52,0.503,0.442,1]
+# fnpt=[0.231,0.231,1,0.667,0.167,0.185,0.333,0]
+
+# vppt=[1-i for i in fnpt]
+
+# f=['base_weighted2','base_weighted3','deep1','deep6','land1','gmf1','gmf3','dummy']
+
+# plt.plot(fppt,vppt,'o')
+
+# for l,x,y in zip(f,fppt,vppt):
+#     plt.annotate(l,xy=(x,y))
+
+# plt.xlabel('False positive')
+# plt.ylabel('True positive')
+# plt.title('Patchwise')
+
+# plt.show()
+
+# plt.plot(fppx,vppx,'o')
+
+# for l,x,y in zip(f,fppx,vppx):
+#     plt.annotate(l,xy=(x,y))
+
+# plt.xlabel('False positive')
+# plt.ylabel('True positive')
+# plt.title('Pixelwise')
+
+# plt.show()
+
+
+# fppx=[0.0019,0.0022,0.,0.0133,2.17284604e-02,1.37518478e-02,1.40178733e-02]
+# vppx=[0.15025907,0.28196331,0.,0.01111681,7.98716747e-01,8.58842189e-01,8.06308598e-01]
+# fppt=[0.363313609467,0.365680473373,0.0,0.407560543414,0.571342925659,0.575539568345,0.442351013721,1]
+# fnpt=[0.1,0.0,1.0,0.714285714286,0.0625,0.03125,0.28125,0]
+
+# vppt=[1-i for i in fnpt]
+
+# f=['base_weighted2','base_weighted3','deep1','deep6','land1','gmf1','gmf3','dummy']
+
+# plt.plot(fppt,vppt,'o')
+
+# for l,x,y in zip(f,fppt,vppt):
+#     plt.annotate(l,xy=(x,y))
+
+# plt.xlabel('False positive')
+# plt.ylabel('True positive')
+# plt.title('Patchwise')
+
+# plt.show()
+
+# plt.plot(fppx,vppx,'o')
+
+# for l,x,y in zip(f,fppx,vppx):
+#     plt.annotate(l,xy=(x,y))
+
+# plt.xlabel('False positive')
+# plt.ylabel('True positive')
+# plt.title('Pixelwise')
+
+# plt.show()

@@ -75,7 +75,7 @@ batch_size=12
 # Nombre d'époques sur un choix d'images
 epochs=4
 # Nombre de fois qu'on choisit training_size images
-nb_shuffle=3
+nb_shuffle=0
 # Optimizer
 optimizer=adadelta()
 
@@ -268,9 +268,9 @@ with h.File(hdf,"r") as f:
         print "save"
         unet.save_weights(weight_dir+fl)
 
-    del input_gmf
-    del train_mask
-    del train_nrcs
+        del input_gmf
+        del train_mask
+        del train_nrcs
 
 ###########################
 # Test sur les jeux de test
