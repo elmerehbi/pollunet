@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from keras.models import Model, load_model
 from keras.layers.core import Activation, Reshape, Permute
-from keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, Dropout, merge
+from keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, Dropout, merge, Lambda
 from keras.layers.convolutional import Cropping2D
 from keras.layers.normalization import BatchNormalization
 from keras.utils import np_utils
@@ -30,7 +30,7 @@ weight_dir = "/users/local/h17valen/Deep_learning_pollution/weights/"
 
 # Poids des différentes classes pour le loss
 ######
-weight_pollution = 530.
+weight_pollution = 15300.
 weight_land = 5.
 weight_boats = 1000.
 weight_sea = 1.
@@ -57,6 +57,8 @@ activation = "relu"
 # Dropout dans la première et la deuxième moitié du réseau (résolution descendant et montante)
 dropout_down = 0.1
 dropout_up = 0.1
+# Seuil à appliquer sur le log
+threshold = 3
 
 # Nombre max de channels utilisés dans le réseau
 channels_max = 48
@@ -69,11 +71,11 @@ def channels(depth, channels_max=channels_max):
 # Apprentissage
 ######
 # Nombre de patch utilisés
-training_size = 2000
+training_size = 1000
 # Batch size (Préferer un grand batch_size, mais si il est trop grand le réseau ne rentre plus en mémoire)
 batch_size=12
 # Nombre d'époques sur un choix d'images
-epochs=4
+epochs=2
 # Nombre de fois qu'on choisit training_size images
 nb_shuffle=6
 # Optimizer

@@ -75,7 +75,7 @@ batch_size=12
 # Nombre d'époques sur un choix d'images
 epochs=4
 # Nombre de fois qu'on choisit training_size images
-nb_shuffle=6
+nb_shuffle=3
 # Optimizer
 optimizer=adadelta()
 

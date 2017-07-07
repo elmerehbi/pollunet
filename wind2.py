@@ -18,7 +18,7 @@ from keras.optimizers import *
 import h5py as h
 import sys
 sys.path.append('../')
-#import measures as m
+import measures as m
 import os.path
 from img_extract import load_field
 
@@ -31,7 +31,7 @@ weight_dir = "/users/local/h17valen/Deep_learning_pollution/weights/"
 
 # Poids des différentes classes pour le loss
 ######
-weight_pollution = 1000.
+weight_pollution = 5000.
 weight_land = 5.
 weight_boats = 1000.
 weight_sea = 1.
@@ -313,14 +313,15 @@ with h.File(hdf,"r") as f:
         print "save"
         unet.save_weights(weight_dir+fl)
 
-    del input_gmf
-    del train_mask
-    del train_nrcs
+        del input_gmf
+        del train_mask
+        del train_nrcs
 
 ###########################
 # Test sur les jeux de test
 ###########################
 
+    l=l_ts
     test_nrcs=f["test/Nrcs/testing_images/"][l]
     input_gmf = f["test/GMF/testing_images"][l]
     input_mask = f["masks/testing_images/"+fl][l][...,1] 
@@ -335,10 +336,11 @@ with h.File(hdf,"a") as f:
     del input_gmf
     del test_nrcs
 
+l=l_tr
 with h.File(hdf,"r") as f:
-    test_nrcs=f["test/Nrcs/training_images/"]
-    input_gmf=f["test/GMF/training_images"]
-    input_mask = f["masks/training_images/"+fl][:][...,1]#.reshape(-1,size_out,size_out,2)
+    test_nrcs=f["test/Nrcs/training_images/"][l]
+    input_gmf=f["test/GMF/training_images"][l]
+    input_mask = f["masks/training_images/"+fl][l][...,1]#.reshape(-1,size_out,size_out,2)
     w=unet.predict([test_nrcs,input_gmf,input_mask],verbose=1,batch_size=16)
 
 with h.File(hdf,"a") as f:

@@ -299,7 +299,6 @@ def load_training_images(field,size,hdf=hdf,nc=netcdf_dir,dt=None,c=1,broadcast=
             pts_train=f["train/patches"][fn]
             pts_test=f["test/patches"][fn]
             n=test.shape[0]
-            print m,len(pts_train)
             test.resize(n+len(pts_test),0)
             for j,p in enumerate(extract_patches(fh,pts_test,size,c=c)):
                 if p.shape[0]<int(size):

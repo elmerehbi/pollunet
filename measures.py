@@ -11,6 +11,7 @@ from math import sqrt
 from random import randint, shuffle
 from matplotlib.colors import LogNorm
 from sklearn.metrics import confusion_matrix, accuracy_score
+import numexpr as ne
 
 def to_classes(a):
     """Renvoie les classes prédites à partir des probabilités"""
@@ -307,6 +308,32 @@ def tx_fn(c,fn,p):
         else:
             return 0 
 
+def confusion_matrix(gt,pred):
+    assert gt.shape == pred.shape
+    n=gt.max()
+    c=np.zeros((n+1,n+1),dtype='i8')
+    for i in range(n):
+        for j in range(n):
+            c[i,j]=np.count_nonzero(ne.evaluate('(gt==i) & (pred==j)'))
+    return c
+
+def accuracy_score(gt,pred):
+    assert gt.shape == pred.shape
+    s=gt.size
+    eq=np.count_nonzero(ne.evaluate('gt==pred'))
+    return float(eq)/s
+
+def fneg(gt,pred):
+    assert gt.shape == pred.shape
+    gt=np.any(ne.evaluate('gt == 2'),axis=(-1,-2))
+    pred=np.any(ne.evaluate('pred == 2'),axis=(-1,-2))
+    fp=np.count_nonzero(np.logical_and(pred,np.logical_not(gt)))
+    fn=np.count_nonzero(np.logical_and(gt,np.logical_not(pred)))
+    l=np.count_nonzero(gt)
+    fp=float(fp)/l
+    fn=float(fn)/(len(gt)-l)
+    return fp, fn
+
 def measures(fn,c=2):
     """Affiches les mesures choisies pour le réseau du fichier fn"""
     with h.File(hdf,'r') as f: 
@@ -320,11 +347,14 @@ def measures(fn,c=2):
             print a
             print "accuracy:"
             print accuracy_score(gt,pred)
-            del gt,pred
+            # del gt,pred
             print "false positive:"
-            print tx_fp(c,fn,p)
+            fp, fn = fneg(gt,pred)
+            print fp
+            # print tx_fp(c,fn,p)
             print "false negative:"
-            print tx_fn(c,fn,p)
+            print fn
+            # print tx_fn(c,fn,p)
 
 
 def randl(n,lg,l):

@@ -1,0 +1,191 @@
+\documentclass{beamer}
+\usepackage[francais,english]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{xspace}
+
+\mode<presentation> {\usetheme{CambridgeUS}}
+\usecolortheme{spruce}
+%%dolphin, spruce
+
+\usepackage{graphicx} % Allows including images
+\usepackage{booktabs} % Allows the use of \toprule, \midrule and \bottomrule in tables
+
+
+\title{Expérimentation du réseau de neurones U-net pour la détéction de pollutions maritimes}
+\author{Herménégilde Valentin}
+\institute{ENS Lyon}
+%\medskip
+\date{\today}
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\section{Problème}
+
+\frame{\tableofcontents[currentsection]}
+
+\begin{frame}
+  \frametitle{Où est la pollution?}
+  \begin{figure}
+    \includegraphics[height=180pt]{images/nrcs_ex.png}
+  \end{figure}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Où est la pollution?}
+  \begin{figure}
+    \includegraphics[height=180pt]{images/mask_ex.png}
+  \end{figure}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Et maintenant?}
+  \begin{figure}
+    \includegraphics[height=180pt]{images/nrcs_full.png}
+  \end{figure}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Et là?}
+  \begin{figure}
+    \includegraphics[height=180pt]{images/piege.png}
+  \end{figure}
+\end{frame}
+
+\section{U-net}
+
+\frame{\tableofcontents[currentsection]}
+
+\begin{frame}
+  \frametitle{U-net}
+  \begin{figure}
+    \includegraphics[height=200pt]{unet_orig.png}
+  \end{figure}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Interêts d'U-net}
+  \begin{itemize}
+  \item Analyse à différentes échelles \pause
+  \item Bonne localisation \pause
+  \item Entraînable sur des petits jeux de données (selon le papier)
+  \end{itemize}
+\end{frame}
+
+\section{Déboires et résultats}
+
+\frame{\tableofcontents[currentsection]}
+
+\begin{frame}
+  Réseau de base: 98\% de précision sur la segmentation... \pause \\
+  Sur 98\% de mer \\ \pause
+  \medskip
+  Avec des poids sur les pollutions: un peu mieux (un petit tiers de pollutions detectées), mais au prix de nombreuses fausses alertes \\ \pause
+  On a effectivement une convergence rapide
+\end{frame}
+
+\begin{frame}
+  \frametitle{Réseaux plus profonds}
+  \begin{figure}
+    \includegraphics[height=150pt]{images/fake1.png}
+    \caption{Sans échelle...}
+  \end{figure}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Problèmes de fond}
+  Fort niveau d'énergie sur les bateaux (affichage en log)
+  \begin{figure}
+    \includegraphics[height=200pt]{images/deep6_2.png}
+  \end{figure}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Problèmes de fond}
+  98\% d'eau, moins de 10 ppm de pollution
+  \begin{figure}
+    \includegraphics[height=200pt]{images/diff_land1.png}
+  \end{figure}
+\end{frame}
+
+
+
+\begin{frame}
+  \frametitle{Solution?}
+  \begin{itemize}
+  \item Surreprésenter les pollutions, mais pas trop
+  \item Fournir la carte des bateaux en entrée
+  \end{itemize}
+  \begin{figure}
+    \includegraphics[height=200pt]{images/boat2_land1.png}
+  \end{figure}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Plus de données?}
+  Le niveau d'intensité sur l'image SAR dépend de la direction et la vitesse du vent, et de l'angle d'incidence (GMF).\pause
+  Qui sont fournis.
+\end{frame}
+
+\begin{frame}
+  \begin{figure}
+    \includegraphics[height=200pt]{images/hard_gmf1.png}
+  \end{figure}
+\end{frame}
+
+\begin{frame}
+  \frametitle{ROC}
+  \begin{figure}
+    \includegraphics[height=200pt]{images/ROC_pixel.png}
+  \end{figure}
+\end{frame}
+
+\begin{frame}
+  \frametitle{ROC}
+  \begin{figure}
+    \includegraphics[height=200pt]{images/ROC_patch.png}
+  \end{figure}
+\end{frame}
+
+\section{A faire (si je n'avais pas eu que six semaines)}
+
+\frame{\tableofcontents[currentsection]}
+
+\begin{frame}
+  \frametitle{Comprendre mes réseaux}
+  \begin{figure}
+    \includegraphics[height=200pt]{images/bad2_gmf3.png}
+  \end{figure}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Comprendre mes réseaux}
+  \begin{figure}
+    \includegraphics[height=200pt]{images/weird_land1.png}
+  \end{figure}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Apprendre à les faire converger}
+  \begin{itemize}
+  \item Grande sensibilité aux les poids données aux différentes classes
+  \item Risque de rester coincé sur un réseau qui ne voit que de la mer
+  \end{itemize}
+\end{frame}
+
+\section{Conclusion}
+
+\frame{\tableofcontents[currentsection]}
+
+\begin{frame}
+  \frametitle{Conclusion}
+  \begin{itemize}
+  \item Réseau pas tout à fait prêt à être utilisé en situation réelle
+  \end{itemize}
+\end{frame}
+
+\end{document}
