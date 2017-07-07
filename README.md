@@ -22,7 +22,7 @@ Pour des raisons de simplicité, seul le fichier gmf3.py est commenté (c'est le
 
 Le jeu de données de base consiste en 204 fichiers netcdf contenant une image SAR de dimensions variables prise autour du détroit de Gibraltar, la segmentation correspondante, les données de vent déduites de l'image et prédite, l'angle d'incidence selon une dimension, et des données de fréquence de pollution et  baythymétrie qui n'ont pas été utilisées ici.
 
-Il a d'abord été séparé en deux dossiers, train et test, test contenant les 30 images les plus récentes et train l'autre. Ces deux dossiers séparent les images d'entraînement des images de test. Des patches en ont ensuite été extraits (img_extract.py).
+Il a d'abord été séparé en deux dossiers, train et test, test contenant les 34 images les plus récentes (octobre 2015 à mars 2017) et train les autres (jusqu'à mai 2017). Ces deux dossiers séparent les images d'entraînement des images de test. Des patches en ont ensuite été extraits (img_extract.py).
 
 ## Résultats
 

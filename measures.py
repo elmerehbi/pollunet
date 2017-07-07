@@ -147,32 +147,35 @@ def aff_full(fn,i,p,n=2,t=None):
         o=(508-a)/2
         q=o
         if p=='train':
-            nrcs=f["train/Nrcs/"][i][o:-o,o:-o]
+            path='{1}/{0}'
         else:
-            nrcs=f["test/Nrcs/"+p][i][o:-o,o:-o]
+            path='test/{0}/{1}'
+        if f.__contains__(path.format("GMF",p)):
+            gmf=f[path.format("GMF",p)][i][q:-q,q:-q]
+            col=3
+        else:
+            col=2
+        nrcs=f[path.format('Nrcs',p)][i][o:-o,o:-o]
         a,b,c=f["masks/{}/{}".format(p,fn)][i].shape
         d,e,g=f["results/{}/{}".format(p,fn)][i].shape
         o=(a-d)/2
-        if p=='train':
-            gmf=f["train/GMF"][i][q:-q,q:-q]
-        else:
-            gmf=f["test/GMF/"+p][i][q:-q,q:-q]
         mask=square(to_classes(f["masks/{}/{}".format(p,fn)][i,o:-o,o:-o]))
         segm=f["segmentation/{}/{}".format(p,fn)][i]
         res=f["results/{}/{}".format(p,fn)][i,...,n]
         vmin=min(nrcs.min(),gmf.min())
         vmax=max(nrcs.max(),gmf.max())
-        wmin=min(mask.min(),segm.min())
-        wmax=max(mask.max(),segm.max())
-        plt.subplot(2,3,1)
+        wmin=0
+        wmax=3
+        plt.subplot(2,col,1)
         plt.imshow(nrcs,norm=LogNorm(),cmap='gray',vmin=vmin,vmax=vmax)
         plt.title('Nrcs')
-        plt.subplot(2,3,2)
+        plt.subplot(2,col,2)
         plt.imshow(mask,vmin=wmin,vmax=wmax)
         plt.title('Ground truth')
-        plt.subplot(2,3,3)
-        plt.imshow(gmf,norm=LogNorm(),cmap='gray',vmin=vmin,vmax=vmax)
-        plt.title('Geophysical model')
+        if f.__contains__(path.format("GMF",p)):
+            plt.subplot(2,3,3)
+            plt.imshow(gmf,norm=LogNorm(),cmap='gray',vmin=vmin,vmax=vmax)
+            plt.title('Geophysical model')
         plt.subplot(2,2,3)
         plt.imshow(segm,vmin=wmin,vmax=wmax)
         plt.title('Predicted segmentation')
@@ -191,6 +194,13 @@ def view_rand(n,fn,p):
     for i in range(n):
         m=randint(0,l-1)
         aff(fn,m,p,t=str(m))
+
+def view_full_rand(n,fn,p):
+    with h.File(hdf,'r') as f:
+        l=len(f['segmentation/{}/{}'.format(p,fn)])
+    for i in range(n):
+        m=randint(0,l-1)
+        aff_full(fn,m,p,t=str(m))
 
 def find_class(c,fn,p):
     """Renvoie la liste des indices des masques en sortie contentant la classe c"""
@@ -340,10 +350,11 @@ def load_pollutions():
 
 #load_pollutions()
 
-with h.File(hdf,'r') as f: 
-    l4_train=list(f['pollutions_indices/'+tra][:])
-    l4_tr=list(f['pollutions_indices/'+tr][:])
-    l4_ts=list(f['pollutions_indices/'+ts][:])
+with h.File(hdf,'r') as f:
+    if f.__contains__('pollutions_indices/'+ts):
+        l4_train=list(f['pollutions_indices/'+tra][:])
+        l4_tr=list(f['pollutions_indices/'+tr][:])
+        l4_ts=list(f['pollutions_indices/'+ts][:])
 
 
 # fppx=[0.0011,0.0012,0,0.0088,0.012,0.0075,0.0082]

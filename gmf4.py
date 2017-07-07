@@ -43,7 +43,7 @@ reload_weights = False
 width = 508
 height = 508
 # Nombre de classes à distinguer
-nbClass = 4
+nbClass = 3
 # Taille du kernel utilisé pour les convolutions
 kernel = 5
 # Profondeur du réseau U-net (en nombre de max-pooling/upsampling)
@@ -139,11 +139,11 @@ def unet_layers(x,depth,channels_max):
 
 sar_input = Input(shape=(height, width))
 gmf_input = Input(shape=(height, width))
-mask_input = Input(shape=(height,width, 2))
+mask_input = Input(shape=(height,width))
 
 sar = Reshape((1,height,width))(sar_input)
 gmf = Reshape((1,height,width))(gmf_input) 
-mask = Permute((3,1,2))(mask_input)
+mask = Reshape((1,height,width))(mask_input) #Permute((3,1,2))(mask_input)
 
 x = concatenate([sar,gmf],axis=1)
 
@@ -191,6 +191,10 @@ with h.File(hdf,"a") as f:
     nb_set1 = len(f["test/Nrcs/training_images"])
     nb_set2 = len(f["test/Nrcs/testing_images"])
 
+
+    # Nombre d'étape pour traiter 
+    n=8
+
     if not f.__contains__("masks/training_images/"+fl):
         a='gmf3.py'
         f['masks/train/'+fl]=f['masks/train/'+a]
@@ -198,12 +202,10 @@ with h.File(hdf,"a") as f:
         f['masks/training_images/'+fl]=f['masks/training_images/'+a]
         f['weights/'+fl]=f['weights/'+a]
 
-    # Nombre d'étape pour traiter 
-    n=8
     if not f.__contains__("masks/training_images/"+fl):
         a=f["train/Mask"][:]
         a[(a&6)!=0]=2
-        a[(a&32)!=0]=3
+        a[(a&32)!=0]=1
         f.require_dataset("masks/train/"+fl,a.shape+(nbClass,),dtype='f4')
 
         l=len(a)/n+1
@@ -211,21 +213,24 @@ with h.File(hdf,"a") as f:
             f["masks/train/"+fl][i*l:(i+1)*l]=np_utils.to_categorical(a[i*l:(i+1)*l],nbClass).reshape(a[i*l:(i+1)*l].shape+(nbClass,))
         a=f["test/Mask/testing_images/"][:]
         a[(a&6)!=0]=2
-        a[(a&32)!=0]=3
+        a[(a&32)!=0]=1
         f.require_dataset("masks/testing_images/"+fl,a.shape+(nbClass,),dtype='f4')
         f["masks/testing_images/"+fl][:]=np_utils.to_categorical(a,nbClass).reshape(a.shape+(nbClass,))
         a=f["test/Mask/training_images/"][:]
         a[(a&6)!=0]=2
-        a[(a&32)!=0]=3
+        a[(a&32)!=0]=1
         f.require_dataset("masks/training_images/"+fl,a.shape+(nbClass,),dtype='f4')
         f["masks/training_images/"+fl][:]=np_utils.to_categorical(a,nbClass).reshape(a.shape+(nbClass,))
-        
+
     if not f.__contains__("weights/"+fl) or reload_weights:
         (a,b,d,c)=f["masks/train/"+fl].shape
         w=np.full((a,size_out*size_out),1.,dtype=np.float32)
         l=len(w)/n+1
         for i in range(n):
-            w[i*l:(i+1)*l,:]=np.argmax(f["masks/train/"+fl][i*l:(i+1)*l,o:-o,o:-o],axis=-1).reshape((-1,size_out*size_out))
+            b=f["train/Mask/"][i*l:(i+1)*l,o:-o,o:-o].reshape((-1,size_out*size_out))
+            b[(a&6)]=2
+            b[(a&32)]=1
+            w[i*l:(i+1)*l,:]=b[:]
         w=w.reshape(a,-1)
         f.require_dataset('weights/'+fl,(nb_train,size_out*size_out),dtype=np.float32,exact=False)
         f["weights/"+fl][:]=w
@@ -261,12 +266,11 @@ with h.File(hdf,"r") as f:
         input_gmf = f["train/GMF"][l]
         # Input mask
         print "mask"
-        input_mask = f["masks/train/"+fl][l][...,[1,3]]
+        input_mask = f["masks/train/"+fl][l][...,1]
         print "weights"
-        w[w==1]=weight_land
-        w[w==0]=weight_sea   
-        w[w==2]=weight_pollution
-        w[w==3]=weight_boats
+        w[w==1.]=weight_boats
+        w[w==0.]=weight_sea   
+        w[w==2.]=weight_pollution
         
         print "fit"
         unet.fit([train_nrcs,input_gmf,input_mask],train_mask,shuffle=True,verbose=1,batch_size=batch_size,epochs=epochs,sample_weight=w)
@@ -284,7 +288,7 @@ with h.File(hdf,"r") as f:
 
     test_nrcs=f["test/Nrcs/testing_images/"]
     input_gmf = f["test/GMF/testing_images"]
-    input_mask = f["masks/testing_images/"+fl][:][...,[1,3]] 
+    input_mask = f["masks/testing_images/"+fl][:][...,1] 
     v=unet.predict([test_nrcs,input_gmf,input_mask],verbose=1,batch_size=16)
 
 with h.File(hdf,"a") as f:
@@ -299,7 +303,7 @@ with h.File(hdf,"a") as f:
 with h.File(hdf,"r") as f:
     test_nrcs=f["test/Nrcs/training_images/"]
     input_gmf=f["test/GMF/training_images"]
-    input_mask = f["masks/training_images/"+fl][:][...,[1,3]]#.reshape(-1,size_out,size_out,2)
+    input_mask = f["masks/training_images/"+fl][:][...,1]#.reshape(-1,size_out,size_out,2)
     w=unet.predict([test_nrcs,input_gmf,input_mask],verbose=1,batch_size=16)
 
 with h.File(hdf,"a") as f:

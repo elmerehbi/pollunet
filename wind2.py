@@ -7,7 +7,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from keras.models import Model, load_model
-from keras.layers.core import Activation, Reshape, Permute
+from keras.layers.core import Activation, Reshape, Permute, Lambda
 from keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, Dropout, merge
 from keras.layers.convolutional import Cropping2D
 from keras.layers.normalization import BatchNormalization
@@ -18,8 +18,9 @@ from keras.optimizers import *
 import h5py as h
 import sys
 sys.path.append('../')
-import measures as m
-import os.path 
+#import measures as m
+import os.path
+from img_extract import load_field
 
 ###########################
 # Paramètres du modèle
@@ -30,7 +31,7 @@ weight_dir = "/users/local/h17valen/Deep_learning_pollution/weights/"
 
 # Poids des différentes classes pour le loss
 ######
-weight_pollution = 530.
+weight_pollution = 1000.
 weight_land = 5.
 weight_boats = 1000.
 weight_sea = 1.
@@ -57,6 +58,8 @@ activation = "relu"
 # Dropout dans la première et la deuxième moitié du réseau (résolution descendant et montante)
 dropout_down = 0.1
 dropout_up = 0.1
+# Seuil à appliquer sur le log
+threshold = 3
 
 # Nombre max de channels utilisés dans le réseau
 channels_max = 48
@@ -73,9 +76,9 @@ training_size = 2000
 # Batch size (Préferer un grand batch_size, mais si il est trop grand le réseau ne rentre plus en mémoire)
 batch_size=12
 # Nombre d'époques sur un choix d'images
-epochs=4
+epochs=2
 # Nombre de fois qu'on choisit training_size images
-nb_shuffle=6
+nb_shuffle=0
 # Optimizer
 optimizer=adadelta()
 
@@ -133,6 +136,11 @@ def unet_layers(x,depth,channels_max):
         x=Dropout(dropout_up)(x)
     return x
 
+def log_min(x):
+    x = K.log(x)
+    x = K.minimum(x,threshold)
+    return x
+
 ###########################
 # Construction du réseau
 ###########################
@@ -146,6 +154,8 @@ gmf = Reshape((1,height,width))(gmf_input)
 mask = Reshape((1,height,width))(mask_input) #Permute((3,1,2))(mask_input)
 
 x = concatenate([sar,gmf],axis=1)
+
+x = Lambda(log_min)(x)
 
 x = unet_layers(x,depth,channels_max)
 
@@ -191,9 +201,24 @@ with h.File(hdf,"a") as f:
     nb_set1 = len(f["test/Nrcs/training_images"])
     nb_set2 = len(f["test/Nrcs/testing_images"])
 
+    if not f.__contains__("masks/training_images/"+fl):
+        a='gmf3.py'
+        f['masks/train/'+fl]=f['masks/train/'+a]
+        f['masks/testing_images/'+fl]=f['masks/testing_images/'+a]
+        f['masks/training_images/'+fl]=f['masks/training_images/'+a]
+        f['weights/'+fl]=f['weights/'+a]
 
+    
     # Nombre d'étape pour traiter 
     n=8
+
+    if not f.__contains__("masks/training_images/"+fl):
+        a='gmf3.py'
+        f['masks/train/'+fl]=f['masks/train/'+a]
+        f['masks/testing_images/'+fl]=f['masks/testing_images/'+a]
+        f['masks/training_images/'+fl]=f['masks/training_images/'+a]
+        f['weights/'+fl]=f['weights/'+a]
+
     if not f.__contains__("masks/training_images/"+fl):
         a=f["train/Mask"][:]
         a[(a&6)!=0]=2
@@ -213,7 +238,7 @@ with h.File(hdf,"a") as f:
         a[(a&32)!=0]=1
         f.require_dataset("masks/training_images/"+fl,a.shape+(nbClass,),dtype='f4')
         f["masks/training_images/"+fl][:]=np_utils.to_categorical(a,nbClass).reshape(a.shape+(nbClass,))
-
+        
     if not f.__contains__("weights/"+fl) or reload_weights:
         (a,b,d,c)=f["masks/train/"+fl].shape
         w=np.full((a,size_out*size_out),1.,dtype=np.float32)
@@ -227,6 +252,23 @@ with h.File(hdf,"a") as f:
         f.require_dataset('weights/'+fl,(nb_train,size_out*size_out),dtype=np.float32,exact=False)
         f["weights/"+fl][:]=w
 
+    if not f.__contains__("test/modelWindSpeed/testing_images/"):
+        load_field('modelWindSpeed',width,c=25.)
+
+##########################
+# Selection des patchs ayant un vent moyen entre 4 et 8 m/s
+##########################
+
+with h.File(hdf,"r") as f:
+    avg=np.average(f['train/modelWindSpeed'][:],axis=(-1,-2))
+    l_train=list(np.arange(nb_train)[np.logical_and(avg>4.,avg<8.)])
+    print len(l_train)
+    avg=np.average(f['test/modelWindSpeed/training_images'][:],axis=(-1,-2))
+    l_tr=list(np.arange(nb_set1)[np.logical_and(avg>4.,avg<8.)])
+    print len(l_tr)
+    avg=np.average(f['test/modelWindSpeed/testing_images'][:],axis=(-1,-2))
+    l_ts=list(np.arange(nb_set2)[np.logical_and(avg>4.,avg<8.)])
+    print len(l_ts)
 
 ###########################
 # Apprentissage
@@ -240,7 +282,7 @@ with h.File(hdf,"r") as f:
     print nb_shuffle
     for i in range(nb_shuffle):
         print i
-        l = m.randl(training_size,nb_train,m.l4_train)
+        l = l_train #m.randl(training_size,nb_train,m.l4_train)
 
         #    print len(l), nb_train,len(l), f["weights/"+fl].shape
         # print l[-1], nb_train
@@ -260,9 +302,10 @@ with h.File(hdf,"r") as f:
         print "mask"
         input_mask = f["masks/train/"+fl][l][...,1]
         print "weights"
-        w[w==1.]=weight_boats
-        w[w==0.]=weight_sea   
-        w[w==2.]=weight_pollution
+        w[w==1]=weight_land
+        w[w==0]=weight_sea   
+        w[w==2]=weight_pollution
+        w[w==3]=weight_boats
         
         print "fit"
         unet.fit([train_nrcs,input_gmf,input_mask],train_mask,shuffle=True,verbose=1,batch_size=batch_size,epochs=epochs,sample_weight=w)
@@ -270,23 +313,23 @@ with h.File(hdf,"r") as f:
         print "save"
         unet.save_weights(weight_dir+fl)
 
-        del input_gmf
-        del train_mask
-        del train_nrcs
+    del input_gmf
+    del train_mask
+    del train_nrcs
 
 ###########################
 # Test sur les jeux de test
 ###########################
 
-    test_nrcs=f["test/Nrcs/testing_images/"]
-    input_gmf = f["test/GMF/testing_images"]
-    input_mask = f["masks/testing_images/"+fl][:][...,1] 
+    test_nrcs=f["test/Nrcs/testing_images/"][l]
+    input_gmf = f["test/GMF/testing_images"][l]
+    input_mask = f["masks/testing_images/"+fl][l][...,1] 
     v=unet.predict([test_nrcs,input_gmf,input_mask],verbose=1,batch_size=16)
 
 with h.File(hdf,"a") as f:
-    f.require_dataset("results/testing_images/"+fl,shape=(nb_set2,size_out,size_out,nbClass),dtype='f4',exact=False)
+    f.require_dataset("results/testing_images/"+fl,shape=(len(test_nrcs),size_out,size_out,nbClass),dtype='f4',exact=False)
     f["results/testing_images/"+fl][:]=v.reshape(-1,size_out,size_out,nbClass)
-    f.require_dataset("segmentation/testing_images/"+fl,shape=(nb_set2,size_out,size_out),dtype='i8',exact=False)
+    f.require_dataset("segmentation/testing_images/"+fl,shape=(len(test_nrcs),size_out,size_out),dtype='i8',exact=False)
     f["segmentation/testing_images/"+fl][:]=m.to_classes(v).reshape(-1,size_out,size_out)
 
     del input_gmf
@@ -299,9 +342,9 @@ with h.File(hdf,"r") as f:
     w=unet.predict([test_nrcs,input_gmf,input_mask],verbose=1,batch_size=16)
 
 with h.File(hdf,"a") as f:
-    f.require_dataset("results/training_images/"+fl,shape=(nb_set1,size_out,size_out,nbClass),dtype='f4',exact=False)
+    f.require_dataset("results/training_images/"+fl,shape=(len(test_nrcs),size_out,size_out,nbClass),dtype='f4',exact=False)
     f["results/training_images/"+fl][:]=w.reshape(-1,size_out,size_out,nbClass) 
-    f.require_dataset("segmentation/training_images/"+fl,shape=(nb_set1,size_out,size_out),dtype='i8',exact=False)
+    f.require_dataset("segmentation/training_images/"+fl,shape=(len(test_nrcs),size_out,size_out),dtype='i8',exact=False)
     f["segmentation/training_images/"+fl][:]=m.to_classes(w).reshape(-1,size_out,size_out)
 
     del input_gmf

@@ -30,7 +30,7 @@ weight_dir = "/users/local/h17valen/Deep_learning_pollution/weights/"
 
 # Poids des différentes classes pour le loss
 weight_pollution = 500.
-weight_land = 5.
+#weight_land = 5.
 weight_boats = 1000.
 weight_sea = 1
 reload_weights = False
@@ -38,7 +38,7 @@ reload_weights = False
 # Network parameters:
 width = 508
 height = 508
-nbClass = 4
+nbClass = 3
 kernel = 5
 depth = 3
 nb_conv = 1
@@ -152,7 +152,7 @@ with h.File(hdf,"a") as f:
     if not f.__contains__("masks/training_images/"+fl):
         a=f["train/Mask"][:]#[:,o:-o,o:-o]
         a[(a&6)!=0]=2
-        a[(a&32)!=0]=3
+        a[(a&32)!=0]=1
 #        a=a.reshape(-1,b)
         f.require_dataset("masks/train/"+fl,a.shape+(nbClass,),dtype='f4')
 
@@ -161,14 +161,14 @@ with h.File(hdf,"a") as f:
             f["masks/train/"+fl][i*l:(i+1)*l]=np_utils.to_categorical(a[i*l:(i+1)*l],nbClass).reshape(a[i*l:(i+1)*l].shape+(nbClass,))
         a=f["test/Mask/testing_images/"][:]#[:,o:-o,o:-o]
         a[(a&6)!=0]=2
-        a[(a&32)!=0]=3
+        a[(a&32)!=0]=1
 #        a=a.reshape(-1,b)
 #        f["masks/testing_images/"+fl].resize(a.shape+(nbClass,))
         f.require_dataset("masks/testing_images/"+fl,a.shape+(nbClass,),dtype='f4')
         f["masks/testing_images/"+fl][:]=np_utils.to_categorical(a,nbClass).reshape(a.shape+(nbClass,))
         a=f["test/Mask/training_images/"][:]#[:,o:-o,o:-o]
         a[(a&6)!=0]=2
-        a[(a&32)!=0]=3
+        a[(a&32)!=0]=1
 #        a=a.reshape(-1,b)
         f.require_dataset("masks/training_images/"+fl,a.shape+(nbClass,),dtype='f4')
 #        f["masks/training_images/"+fl].resize(a.shape+(nbClass,))
@@ -179,11 +179,10 @@ with h.File(hdf,"a") as f:
         w=np.full((a,size_out*size_out),1.,dtype=np.float32)
         l=len(w)/n+1
         for i in range(n):
-            w[i*l:(i+1)*l,:]=np.argmax(f["masks/train/"+fl][i*l:(i+1)*l,o:-o,o:-o],axis=-1).reshape((-1,size_out*size_out))
-        # w[w==1]=weight_land
-        # w[w==0]=weight_sea
-        # w[w==2]=weight_pollution
-        # w[w==3]=weight_boats
+            b=f["train/Mask/"][i*l:(i+1)*l,o:-o,o:-o].reshape((-1,size_out*size_out))
+            b[(a&6)]=2
+            b[(a&32)]=1
+            w[i*l:(i+1)*l,:]=b[:]
         w=w.reshape(a,-1)
         f.require_dataset('weights/'+fl,(nb_train,size_out*size_out),dtype=np.float32,exact=False)
         f["weights/"+fl][:]=w
@@ -207,10 +206,9 @@ with h.File(hdf,"r") as f:
     # Input mask
     # input_mask = f["masks/train/"+fl][l][...,[1,3]]
 
-    w[w==1]=weight_land
-    w[w==0]=weight_sea   
-    w[w==2]=weight_pollution
-    w[w==3]=weight_boats
+    w[w==1.]=weight_boats
+    w[w==0.]=weight_sea   
+    w[w==2.]=weight_pollution
 
     if os.path.isfile(weight_dir+fl):
         unet.load_weights(weight_dir+fl,by_name=True)

@@ -1,3 +1,4 @@
+
 #coding=utf8
 """Fonctions d'extraction des patchs"""
 
@@ -10,6 +11,7 @@ from sklearn.feature_extraction.image import extract_patches_2d
 #from copy import deepcopy
 from numpy.lib.stride_tricks import as_strided
 from os import listdir
+from measures import load_pollutions
 import h5py as h
 
 #########################################
@@ -17,9 +19,9 @@ import h5py as h
 # Taille des patches: (Il doivent pouvoir passer par U-net)
 patch_size = 508
 # Nombre max d'image 508x508 d'apprentissage à extraire des images d'apprentissage:
-nb_max_patch_par_image = 200
+nb_max_patch_par_image = 250
 # Fraction minimale de l'image qui doit être recouverte de mer:
-min_sea_fraction = 0.60
+min_sea_fraction = 1.
 # Bordure commune max entre une image 508x508 et les autres (en pixels):
 max_overlap = 200
 # Nombre de patch de test par image d'apprentissage:
@@ -53,15 +55,12 @@ def aff(name,field='Nrcs'):
         norm=LogNorm()
     else:
         norm=None
-    imshow(a[::10,::10],norm=norm,origin='lc')
+    if a.shape[0]>3000:
+        s=10
+    else:
+        s=1
+    imshow(a[::s,::s],norm=norm,origin='lc')
     show()
-
-def rand_patch(f,size=patch_size,min_sea_fraction=0.75):
-    a,r=f['Nrcs'].shape
-    x,y=randint(0,a-size),randint(0,r-size)
-    while np.count_nonzero(f['Mask'][x:x+size,y:y+size]!=1)<=min_sea_fraction*size**2:
-        x,y=randint(0,a-size),randint(0,r-size)
-    return x,y
 
 def tile_array(a, b1, b2):
     l, r, c = a.shape
@@ -207,7 +206,12 @@ def view_gmf(fn):
 
 ###################################################################
 
-
+def rand_patch(f,size=patch_size,min_sea_fraction=min_sea_fraction):
+    a,r=f['Nrcs'].shape
+    x,y=randint(0,a-size),randint(0,r-size)
+    while np.count_nonzero(f['Mask'][x:x+size,y:y+size]!=1)<min_sea_fraction*size**2:
+        x,y=randint(0,a-size),randint(0,r-size)
+    return x,y
 
 def extract_pts(f,n=nb_max_patch_par_image,size=patch_size,min_sea_fraction=min_sea_fraction,max_overlap=max_overlap):
     mask=np.zeros(f['Nrcs'].shape)
@@ -283,7 +287,8 @@ def load_training_images(field,size,hdf=hdf,nc=netcdf_dir,dt=None,c=1,broadcast=
         test=f.create_dataset("test/{}/training_images".format(field),(0,size,size),chunks=True,maxshape=(None,size,size),dtype=dt)
         if f.__contains__("train/{}".format(field)):
             f.__delitem__("train/{}".format(field))
-        dataset_size=sum([len(i) for i in f['train/patches']])
+        dataset_size=sum([len(i) for i in f['train/patches'].values()])
+#        print dataset_size
         train=f.create_dataset("train/{}".format(field),(dataset_size,size,size),chunks=True,dtype=dt)
         m,n=0,0
         for fn in files_train:
@@ -294,9 +299,8 @@ def load_training_images(field,size,hdf=hdf,nc=netcdf_dir,dt=None,c=1,broadcast=
             pts_train=f["train/patches"][fn]
             pts_test=f["test/patches"][fn]
             n=test.shape[0]
-            m=train.shape[0]
+            print m,len(pts_train)
             test.resize(n+len(pts_test),0)
-            train.resize(m+len(pts_train),0)
             for j,p in enumerate(extract_patches(fh,pts_test,size,c=c)):
                 if p.shape[0]<int(size):
                     mq=int(size)-p.shape[-2]
@@ -313,59 +317,18 @@ def load_training_images(field,size,hdf=hdf,nc=netcdf_dir,dt=None,c=1,broadcast=
                     mq=int(size)-p.shape[-1]
                     p=np.concatenate((p,)+(mq*(p[:,[-1]],)),axis=1)
                 train[m+j]=p
-
-def extract_angle(size):
-    field = 'Incidence angle'
-    dt='float32'
-    with h.File(hdf,"a") as f:
-        if f.__contains__("train/{}".format(field)):
-            f.__delitem__("train/{}".format(field))
-        train=f.create_dataset("train/{}".format(field),(0,size,size),chunks=True,maxshape=(None,size,size),dtype=dt)
-        if f.__contains__("test/{}/training_images".format(field)):
-            f.__delitem__("test/{}/training_images".format(field))
-        test=f.create_dataset("test/{}/training_images".format(field),(0,size,size),chunks=True,maxshape=(None,size,size),dtype=dt)
-        for fn in listdir(netcdf_dir.format("train","")):
-            a=import_field(netcdf_dir.format("train",fn),field=field)
-            print a.shape
-            print fn
-            pts_train = f["train/patches"][fn]
-            pts_test = f["test/patches"][fn]
-            patches_train = [a[i:i+size] for j,i in pts_train]
-            patches_test = [a[i:i+size] for j,i in pts_test]
-            n=test.shape[0]
-            m=train.shape[0]
-            test.resize(n+len(pts_test),0)
-            train.resize(m+len(pts_train),0)
-            for j,p in enumerate(patches_train):
-#                print train.shape, train[n+j].shape, p.shape
-                train[n+j]=p
-            for j,p in enumerate(patches_test):
-                test[m+j]=p
-        if f.__contains__("test/{}/testing_images".format(field)):
-            f.__delitem__("test/{}/testing_images".format(field))
-            test=f.create_dataset("test/{}/training_images".format(field),(0,size,size),chunks=True,maxshape=(None,size,size),dtype=dt)
-        for fn in listdir(netcdf_dir.format("test","")):
-            a=import_field(netcdf_dir.format("train",fn),field=field)
-            pts = f["test/patches"][fn]
-            patches = [a[i,i+size] for j,i in pts]
-            n=test.shape[0]
-            test.resize(m+len(pts_train),0) 
-            for j,p in patches:
-                train[n+j]=p
+            m+=len(pts_train)
 
 def load_field(field,size,hdf=hdf,nc=netcdf_dir,c=1,broadcast=False):
     if field=='Mask':
         dt='int8'
     else:
         dt='float32'
+    print "testing"
     load_testing_images(field,size,hdf=hdf,nc=netcdf_dir,dt=dt,c=c,broadcast=broadcast)
+    print "training"
     load_training_images(field,size,hdf=hdf,nc=netcdf_dir,dt=dt,c=c,broadcast=broadcast)
-def change_mask(name,hdf=hdf):
-    with h.File(hdf,"a") as f:
-        u=f["train/Mask"]
-        v=f["test/Mask/testing_images"]
-        w=f["test/Mask/training_images"]
-
+    
         
 ########################################
 # Scripts d'extraction, à décommenter
@@ -413,27 +376,21 @@ def change_mask(name,hdf=hdf):
 
 
 
-def unchunk(field,dataset):
-    if dataset == 'train':
-        path='train/'+field
-    else:
-        path='test/{}/{}'.format(field,dataset)
-    with h.File(hdf) as f:
-        f.create_dataset('tmp',f[path].shape,data=f[path])
-        del f[path]
-        f[path]=f['tmp']
-        del f['tmp']
+# def unchunk(field,dataset):
+#     if dataset == 'train':
+#         path='train/'+field
+#     else:
+#         path='test/{}/{}'.format(field,dataset)
+#     with h.File(hdf) as f:
+#         f.create_dataset('tmp',f[path].shape,data=f[path])
+#         del f[path]
+#         f[path]=f['tmp']
+#         del f['tmp']
 
-# print 'n'
-# unchunk('Nrcs')
-# print 'm'
-# unchunk('Mask')
-# print 'wd'
-# unchunk('modelWindDirection')
-# print 'ws'
-# unchunk('modelWindSpeed')
+# for f in ('Mask','Nrcs','modelWindDirection','modelWindSpeed'):
+#     for d in ('testing_images','training_images','train'):
+#         print f,d
+#         unchunk(f,d)
 
-for f in ('Mask','Nrcs'):
-    for d in ('testing_images','training_images'):
-        print f,d
-        unchunk(f,d)
+# print 'load_pollutions'
+# load_pollutions()

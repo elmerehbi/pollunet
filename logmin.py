@@ -133,6 +133,11 @@ def unet_layers(x,depth,channels_max):
         x=Dropout(dropout_up)(x)
     return x
 
+def log_min(x):
+    x = K.log(x)
+    x = K.minimum(x,threshold)
+    return x
+
 ###########################
 # Construction du réseau
 ###########################
@@ -146,6 +151,8 @@ gmf = Reshape((1,height,width))(gmf_input)
 mask = Reshape((1,height,width))(mask_input) #Permute((3,1,2))(mask_input)
 
 x = concatenate([sar,gmf],axis=1)
+
+x = Lambda(log_min)(x)
 
 x = unet_layers(x,depth,channels_max)
 
