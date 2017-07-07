@@ -24,6 +24,7 @@ Le jeu de données de base consiste en 204 fichiers netcdf contenant une image S
 
 Il a d'abord été séparé en deux dossiers, train et test, test contenant les 34 images les plus récentes (octobre 2015 à mars 2017) et train les autres (jusqu'à mai 2017). Ces deux dossiers séparent les images d'entraînement des images de test. Des patches en ont ensuite été extraits (img_extract.py).
 
+```
 Sur pc-sc-086, les données se présentent sous la forme suivante:
 /users/local/h17valen/Deep_learning_pollution/:
 |__Database_netcdf: netcdf_dir dans le code
@@ -32,6 +33,7 @@ Sur pc-sc-086, les données se présentent sous la forme suivante:
 |__data.hdf5: fichier hdf contenant tout (patch extraits, masques, poids, résultats), correspondant à la variable hdf dans le code
 |__weights: dossiers contenant les poids des réseaux entraînés, par nom de fichier correspondant (weight_dir dans le code)
    |__4classes: poids des réseaux entraînés pour reconnaître 4 classes, ensuite modifiés pour 3 classes (commit 'retiré la terre')
+```
 
 ## Résultats
 
